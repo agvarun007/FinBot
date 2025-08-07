@@ -6,14 +6,14 @@ and streaming support for real-time responses.
 """
 
 import os
-import openai
+from openai import OpenAI
 from .base import BaseLLM
 from finbot.config import OPENAI_MODEL, STOP_SEQUENCE, LLM_TEMPERATURE
 
 
 class OpenAILLM(BaseLLM):
     """OpenAI API implementation for cloud-based LLM inference."""
-    
+
     def __init__(self):
         """
         Initialize OpenAI client with API key validation.
@@ -24,7 +24,7 @@ class OpenAILLM(BaseLLM):
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             raise ValueError("OPENAI_API_KEY environment variable is required")
-        openai.api_key = api_key
+        client = OpenAI(api_key=api_key)
 
     def stream(self, prompt: str, **kwargs):
         """
@@ -38,13 +38,12 @@ class OpenAILLM(BaseLLM):
             Generated text tokens as strings
         """
         try:
-            response = openai.ChatCompletion.create(  # type: ignore
+            response = client.chat.completions.create(# type: ignore
                 model=OPENAI_MODEL,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=LLM_TEMPERATURE,
                 stop=STOP_SEQUENCE,
-                stream=True,
-            )
+                stream=True)
             for chunk in response:
                 content = chunk.choices[0].delta.get('content', '')
                 if content:
