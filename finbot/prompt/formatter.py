@@ -28,7 +28,7 @@ def build_prompt(
     # Define system instructions for the financial assistant
     system = system_instructions.strip() if system_instructions else (
         "You are a helpful Canadian financial expert assistant. "
-        "Answer the user's question using ONLY the provided context. "
+        "Answer the user's question using the provided context. "
         "Give a clear, concise answer. If the answer isn't in the context, "
         "say 'I don't have that information in the provided documents.'"
     )

@@ -10,7 +10,7 @@ License: MIT
 
 __version__ = "1.0.0"
 __author__ = "Varun Agarwal"
-__email__ = "your.email@example.com"
+__email__ = "agvarun34@gmail.com"
 __description__ = "Privacy-focused Canadian financial assistant using RAG"
 
 # Core module imports for easy access

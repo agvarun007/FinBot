@@ -6,11 +6,9 @@ and streaming support for real-time responses.
 """
 
 import os
-from typing import Optional
-
-from openai import OpenAI
+import openai
 from .base import BaseLLM
-from finbot.config import OPENAI_MODEL, STOP_SEQUENCE
+from finbot.config import OPENAI_MODEL, STOP_SEQUENCE, LLM_TEMPERATURE
 
 
 class OpenAILLM(BaseLLM):
@@ -26,7 +24,7 @@ class OpenAILLM(BaseLLM):
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             raise ValueError("OPENAI_API_KEY environment variable is required")
-        self.client = OpenAI(api_key=api_key)
+        openai.api_key = api_key
 
     def stream(self, prompt: str, **kwargs):
         """
@@ -40,17 +38,16 @@ class OpenAILLM(BaseLLM):
             Generated text tokens as strings
         """
         try:
-            response = self.client.chat.completions.create(
+            response = openai.ChatCompletion.create(  # type: ignore
                 model=OPENAI_MODEL,
                 messages=[{"role": "user", "content": prompt}],
-                temperature=0.7,
+                temperature=LLM_TEMPERATURE,
                 stop=STOP_SEQUENCE,
                 stream=True,
             )
-            
             for chunk in response:
-                if chunk.choices[0].delta.content:
-                    yield chunk.choices[0].delta.content
-                    
+                content = chunk.choices[0].delta.get('content', '')
+                if content:
+                    yield content
         except Exception as e:
             yield f"Error: {str(e)}"

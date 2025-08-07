@@ -15,16 +15,17 @@ from rich import print
 from rich.prompt import Prompt
 from finbot.ingestion.ingest import ingest
 from finbot.embedding.embedder import embed
-from finbot.retriever.similarity import retrieve_similar
+from finbot.retriever.similarity import retrieve_similar, rerank_chunks
 from finbot.prompt.formatter import build_prompt
 from finbot.llm import get_llm
-from finbot.config import TOP_K, EMBED_MODEL, MAX_RESPONSE_TOKENS
+from finbot.config import TOP_K, MAX_RESPONSE_TOKENS, LLM_BACKEND
+import time
 
 
 def interactive():
     """Run interactive Q&A session with the financial assistant."""
     llm = get_llm()
-    print("[bold green]FinBot ready › Ask questions about Canadian finance[/bold green]")
+    print("[bold green]FinBot ready > Ask questions about Canadian finance[/bold green]")
     
     while True:
         try:
@@ -32,8 +33,16 @@ def interactive():
             if query.lower() in {"exit", "quit"}:
                 break
                 
+            # Embedding
             query_embedding = embed([query])[0]
+            # Retrieval (vector search)
+            start_time = time.time()
             similar_chunks = retrieve_similar(query_embedding, TOP_K)
+            # Optional reranking for cloud backends
+            if LLM_BACKEND in {"openai", "hf_hub"}:
+                similar_chunks = rerank_chunks(query, similar_chunks, TOP_K)
+            latency_ms = (time.time() - start_time) * 1000
+            print(f"[dim]Retrieval+Rerank latency: {latency_ms:.0f} ms[/dim]")
             
             if not similar_chunks:
                 print("[yellow]No relevant documents found for your question.[/yellow]")
@@ -46,6 +55,8 @@ def interactive():
             token_count = 0
             max_response_tokens = MAX_RESPONSE_TOKENS
             
+            # Response generation (streaming)
+            gen_start = time.time()
             for token in llm.stream(prompt):
                 print(token, end="", flush=True)
                 response_tokens.append(token)
@@ -56,6 +67,8 @@ def interactive():
                     print("\n[dim]...(response truncated)[/dim]")
                     break
             
+            gen_latency = (time.time() - gen_start) * 1000
+            print(f"[dim]Generation latency: {gen_latency:.0f} ms[/dim]")
             # Display source attribution
             if similar_chunks:
                 source = similar_chunks[0].get('source', 'Unknown')
@@ -73,7 +86,7 @@ def main():
     """Main entry point for the CLI application."""
     parser = argparse.ArgumentParser(
         description="FinBot - Canadian Financial Assistant",
-        epilog="For more information, visit: https://github.com/your-username/finbot"
+        epilog="For more information, visit: https://github.com/agvarun007/FinBot.git"
     )
     parser.add_argument(
         "--ingest", 
